@@ -209,11 +209,9 @@ export function mapEntriesToTasks(
 		// Milestone: start === end → render as a very short bar (Frappe handles this)
 		const isMilestone = startDate.getTime() === endDate.getTime();
 		if (isMilestone) {
-			// Give milestones a minimal duration (1 hour) so Frappe can render them
-			// without spanning two full calendar days. formatDateForGantt is called
-			// with includeTime=true so the hour offset is preserved in the date string.
+			// Give milestones a minimal duration so Frappe can render them
 			endDate = new Date(startDate);
-			endDate.setHours(endDate.getHours() + 1);
+			endDate.setDate(endDate.getDate() + 1);
 			// Note: custom_class must NOT contain spaces — classList.add() in
 			// Frappe Gantt's bar.refresh() throws DOMException on spaces.
 			// Use only a single class; milestone styling is secondary to color.
@@ -226,7 +224,7 @@ export function mapEntriesToTasks(
 			id: makeTaskId(entry.file.path),
 			name,
 			start: formatDateForGantt(startDate),
-			end: formatDateForGantt(endDate, isMilestone),
+			end: formatDateForGantt(endDate),
 			progress,
 			dependencies,
 			custom_class,
