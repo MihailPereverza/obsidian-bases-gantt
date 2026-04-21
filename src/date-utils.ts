@@ -43,13 +43,18 @@ export function parseObsidianDate(value: unknown): Date | null {
 }
 
 /**
- * Format a Date as YYYY-MM-DD for Frappe Gantt.
+ * Format a Date as YYYY-MM-DD (or YYYY-MM-DD HH:MM when includeTime=true) for Frappe Gantt.
+ * Pass includeTime=true for milestones so the +1h offset is preserved
+ * and Frappe does not render the bar across two calendar days.
  */
-export function formatDateForGantt(date: Date): string {
+export function formatDateForGantt(date: Date, includeTime = false): string {
 	const y = date.getFullYear();
 	const m = String(date.getMonth() + 1).padStart(2, '0');
 	const d = String(date.getDate()).padStart(2, '0');
-	return `${y}-${m}-${d}`;
+	if (!includeTime) return `${y}-${m}-${d}`;
+	const h = String(date.getHours()).padStart(2, '0');
+	const mi = String(date.getMinutes()).padStart(2, '0');
+	return `${y}-${m}-${d} ${h}:${mi}`;
 }
 
 /**
