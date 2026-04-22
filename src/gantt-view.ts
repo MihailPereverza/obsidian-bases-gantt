@@ -13,7 +13,7 @@ import {
 import Gantt from 'frappe-gantt';
 import type { GanttOptions, PopupContext } from 'frappe-gantt';
 import { mapEntriesToTasks, createGroupHeaderTask, GROUP_HEADER_PREFIX, type GanttTask, type TaskMapperConfig } from './task-mapper';
-import { formatDateForFrontmatter, parseObsidianDate } from './date-utils';
+import { formatDateForFrontmatter, formatDateForGantt, parseObsidianDate } from './date-utils';
 
 export class GanttChartView extends BasesView {
 	type = 'gantt';
@@ -253,6 +253,7 @@ export class GanttChartView extends BasesView {
 			barHeight: this.config.get('barHeight'),
 			showProgress: this.config.get('showProgress'),
 			showExpectedProgress: this.config.get('showExpectedProgress'),
+			viewportStart: this.config.get('viewportStart'),
 		});
 	}
 
@@ -275,14 +276,22 @@ export class GanttChartView extends BasesView {
 		const showProgress = (this.config.get('showProgress') as boolean) ?? false;
 		const showExpectedProgress = (this.config.get('showExpectedProgress') as boolean) ?? false;
 
-		// Calculate earliest task date to scroll to
+		// Determine initial scroll position.
+		// If the user set a viewport start formula (e.g. today() - 7), evaluate it;
+		// otherwise fall back to the earliest task date, then 'today'.
 		const earliestDate = this.getEarliestTaskDate(tasks);
+		let scrollTo: string = earliestDate || 'today';
+		const viewportFormula = this.config.getEvaluatedFormula(this, 'viewportStart');
+		if (viewportFormula instanceof DateValue) {
+			const parsed = parseObsidianDate(viewportFormula.dateOnly().toString());
+			if (parsed) scrollTo = formatDateForGantt(parsed);
+		}
 
 		const options: GanttOptions = {
 			view_mode: viewMode,
 			bar_height: barHeight,
 			today_button: true,
-			scroll_to: earliestDate || 'today',
+			scroll_to: scrollTo,
 			readonly: false,
 			readonly_dates: false,
 			readonly_progress: !showProgress,
@@ -387,12 +396,28 @@ export class GanttChartView extends BasesView {
 		}
 		this.capturedGlobalHandlers = captured;
 
-		// Apply milestone class to bar wrappers (can't combine with color class
-		// in custom_class because Frappe Gantt throws on spaces in classList.add)
+		// Apply milestone class and narrow the bar to ~40% width so it renders
+		// as a compact single-day marker rather than a full-day span.
+		// (can't combine with color class in custom_class because Frappe Gantt
+		// throws DOMException on spaces in classList.add)
 		for (const task of tasks) {
 			if (task.isMilestone) {
 				const wrapper = this.ganttEl.querySelector(`.bar-wrapper[data-id="${task.id}"]`);
-				if (wrapper) wrapper.classList.add('gantt-milestone');
+				if (!wrapper) continue;
+				wrapper.classList.add('gantt-milestone');
+				// Narrow the SVG bar rect so the milestone fits within one column
+				const barEl = wrapper.querySelector('.bar') as SVGRectElement | null;
+				if (barEl) {
+					const origW = parseFloat(barEl.getAttribute('width') ?? '0');
+					const newW = Math.max(Math.round(origW * 0.4), 6);
+					const shift = Math.round((origW - newW) / 2);
+					const origX = parseFloat(barEl.getAttribute('x') ?? '0');
+					barEl.setAttribute('width', String(newW));
+					barEl.setAttribute('x', String(origX + shift));
+					// Hide progress bar — doesn't make sense on a narrow milestone
+					const progEl = wrapper.querySelector('.bar-progress') as SVGRectElement | null;
+					if (progEl) progEl.setAttribute('width', '0');
+				}
 			}
 		}
 
@@ -773,6 +798,12 @@ export function getGanttViewOptions(config: BasesViewConfig): BasesAllOptions[] 
 					displayName: 'Show expected progress',
 					default: false,
 					shouldHide: () => !(config.get('showProgress') as boolean),
+				},
+				{
+					type: 'formula',
+					key: 'viewportStart',
+					displayName: 'Scroll to date',
+					placeholder: 'e.g. today() - 7',
 				},
 			],
 		},
