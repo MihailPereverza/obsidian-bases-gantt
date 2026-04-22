@@ -13,7 +13,7 @@ import {
 import Gantt from 'frappe-gantt';
 import type { GanttOptions, PopupContext } from 'frappe-gantt';
 import { mapEntriesToTasks, createGroupHeaderTask, GROUP_HEADER_PREFIX, type GanttTask, type TaskMapperConfig } from './task-mapper';
-import { formatDateForFrontmatter, formatDateForGantt, parseObsidianDate } from './date-utils';
+import { formatDateForFrontmatter, formatDateForGantt, parseObsidianDate, parseViewportExpression } from './date-utils';
 
 export class GanttChartView extends BasesView {
 	type = 'gantt';
@@ -277,15 +277,13 @@ export class GanttChartView extends BasesView {
 		const showExpectedProgress = (this.config.get('showExpectedProgress') as boolean) ?? false;
 
 		// Determine initial scroll position.
-		// If the user set a viewport start formula (e.g. today() - 7), evaluate it;
+		// If the user set a viewport start expression (e.g. today - 7), parse it;
 		// otherwise fall back to the earliest task date, then 'today'.
 		const earliestDate = this.getEarliestTaskDate(tasks);
 		let scrollTo: string = earliestDate || 'today';
-		const viewportFormula = this.config.getEvaluatedFormula(this, 'viewportStart');
-		if (viewportFormula instanceof DateValue) {
-			const parsed = parseObsidianDate(viewportFormula.dateOnly().toString());
-			if (parsed) scrollTo = formatDateForGantt(parsed);
-		}
+		const viewportExpr = (this.config.get('viewportStart') as string | null) ?? '';
+		const viewportDate = parseViewportExpression(viewportExpr);
+		if (viewportDate) scrollTo = formatDateForGantt(viewportDate);
 
 		const options: GanttOptions = {
 			view_mode: viewMode,
@@ -800,10 +798,10 @@ export function getGanttViewOptions(config: BasesViewConfig): BasesAllOptions[] 
 					shouldHide: () => !(config.get('showProgress') as boolean),
 				},
 				{
-					type: 'formula',
+					type: 'text',
 					key: 'viewportStart',
 					displayName: 'Scroll to date',
-					placeholder: 'e.g. today() - 7',
+					placeholder: 'today - 7  /  today + 14  /  2026-04-01',
 				},
 			],
 		},

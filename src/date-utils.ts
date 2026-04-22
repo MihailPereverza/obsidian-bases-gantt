@@ -53,6 +53,38 @@ export function formatDateForGantt(date: Date): string {
 }
 
 /**
+ * Parse a viewport-start expression into a Date.
+ * Supports:
+ *   today            → today
+ *   today - 7        → 7 days ago
+ *   today + 14       → 14 days from now
+ *   2026-04-01       → fixed date
+ * Returns null for empty or unrecognisable input.
+ */
+export function parseViewportExpression(expr: string): Date | null {
+	const s = expr.trim().toLowerCase();
+	if (!s) return null;
+
+	if (s === 'today' || s === 'today()') {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		return d;
+	}
+
+	const rel = s.match(/^today\(\)?\s*([+-])\s*(\d+)$/);
+	if (rel) {
+		const sign = rel[1] === '+' ? 1 : -1;
+		const days = parseInt(rel[2], 10);
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + sign * days);
+		return d;
+	}
+
+	return parseObsidianDate(expr);
+}
+
+/**
  * Format a Date for writing back to frontmatter.
  * Returns YYYY-MM-DD by default, or YYYY-MM-DDTHH:MM:SS if includeTime is true.
  */
