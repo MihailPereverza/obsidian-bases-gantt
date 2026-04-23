@@ -166,14 +166,6 @@
 	display: none;
 }
 
-/* ── Milestone rendering ─────────────────────────────────────────── */
-
-.bases-gantt-view .gantt .gantt-milestone .bar {
-	rx: 2;
-	ry: 2;
-	opacity: 0.9;
-}
-
 /* ── Rich hover popup ────────────────────────────────────────────── */
 
 .bases-gantt-view .popup-wrapper {

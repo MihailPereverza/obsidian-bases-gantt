@@ -5,7 +5,6 @@ import { parseObsidianDate, formatDateForGantt } from './date-utils';
 /** Extended task type carrying the original file path for click-to-open. */
 export interface GanttTask extends FrappeTask {
 	filePath: string;
-	isMilestone?: boolean;
 }
 
 /** Configuration for mapping entries to tasks, derived from view options. */
@@ -121,14 +120,9 @@ export function mapEntriesToTasks(
 		if (!startDate) continue;
 
 		let endDate: Date | null = null;
-		let hasExplicitEndDate = false;
 		if (config.endProperty) {
 			const endVal = entry.getValue(config.endProperty);
-			const parsed = parseObsidianDate(extractRawValue(endVal));
-			if (parsed) {
-				endDate = parsed;
-				hasExplicitEndDate = true;
-			}
+			endDate = parseObsidianDate(extractRawValue(endVal));
 		}
 		// Default: if no end date, task spans 1 day.
 		// Frappe Gantt internally adds 24h to date-only end strings, so passing
@@ -211,16 +205,6 @@ export function mapEntriesToTasks(
 			}
 		}
 
-		// Milestone: user explicitly set start === end.
-		// Frappe Gantt adds 24h to date-only end strings, so end === start
-		// already produces a 1-day bar — no extra offset needed.
-		// Note: custom_class must NOT contain spaces — classList.add() in
-		// Frappe Gantt's bar.refresh() throws DOMException on spaces.
-		const isMilestone = hasExplicitEndDate && startDate.getTime() === endDate.getTime();
-		if (isMilestone && !custom_class) {
-			custom_class = 'gantt-milestone';
-		}
-
 		tasks.push({
 			id: makeTaskId(entry.file.path),
 			name,
@@ -230,7 +214,6 @@ export function mapEntriesToTasks(
 			dependencies,
 			custom_class,
 			filePath: entry.file.path,
-			isMilestone,
 		});
 	}
 

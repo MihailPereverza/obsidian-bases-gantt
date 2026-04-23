@@ -1,7 +1,7 @@
 {
 	"id": "bases-gantt",
 	"name": "Bases Gantt",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"minAppVersion": "1.10.0",
 	"description": "Gantt chart / timeline view for Bases. Visualize tasks with start and end dates, dependencies, and progress.",
 	"author": "lhassa8",
